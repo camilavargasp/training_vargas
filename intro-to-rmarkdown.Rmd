@@ -1,0 +1,37 @@
+---
+title: "Intro to RMarkdown"
+author: "Camila Vargas Poulsen"
+date: "2023-02-27"
+output: html_document
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This is *italic*
+
+This is **bold**
+
+This is a very interesting fact [@oke2020].
+
+| Col1   | Col2 | Col3 |
+|--------|------|------|
+| Item 1 |      |      |
+| Item 2 |      |      |
+|        |      |      |
+
+
+```{r}
+x <- 4*3
+
+```
+
+
+
+
+
+
