@@ -1,4 +1,4 @@
-# Practice Repo
+# Vargas Training Repository
 
 # getting to know GitHUB
 
