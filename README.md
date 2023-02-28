@@ -1,4 +1,4 @@
-# Practice Repo
+# Practicing GitHUB
 
 # getting to know GitHUB
 
