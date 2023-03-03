@@ -1,0 +1,157 @@
+---
+title: "Geospatial Analysis with sf"
+author: "Camila Vargas Poulsen"
+date: "2023-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load libraries
+```{r loadLibraries}
+
+library(sf)
+library(ggplot2)
+library(ggmap)
+library(scales)
+library(leaflet)
+library(dplyr)
+
+```
+
+## Read data
+
+```{r readData}
+ak_region <- read_sf("data/ak_regions_simp.shp")
+
+```
+
+
+Simple plot
+
+```{r}
+plot(ak_region)
+```
+
+Exploratory analysis
+
+```{r}
+class(ak_region)
+
+st_crs(ak_region)
+```
+
+Transform crs
+
+```{r transformingCRS}
+
+ak_region_3338 <- ak_region %>% 
+  st_transform(crs = 3338)
+
+st_crs(ak_region_3338)
+
+
+plot(ak_region_3338)
+```
+
+Projected data can be plotted in 2D.
+
+Unprojected assumes its 3D object.
+
+## sf and tidyverse
+
+
+```{r}
+pop <- read.csv("data/alaska_population.csv")
+```
+
+```{r}
+pop_4326 <- st_as_sf(pop,
+                     coords = c("lng", "lat"),
+                     crs = 4326,
+                     remove = FALSE)
+
+head(pop_4326)
+```
+
+
+## Assing each city to a region using `st_join()`
+
+```{r}
+# pop_joind <- st_join(pop_4326, ak_region_3338, join = st_within)
+```
+
+In order to be able to join we need both sf objects to have the same projection.
+
+## transfroming pop data
+```{r}
+pop_3338 <- st_transform(pop_4326, crs = 3338)
+```
+
+Now join data
+
+
+```{r}
+pop_joind <- st_join(pop_3338, ak_region_3338, join = st_within)
+```
+
+
+## Calculate the total population for a region
+```{r}
+pop_region <- pop_joind %>% 
+  as.data.frame() %>% 
+  group_by(region) %>% 
+  summarise(total_pop = sum(population))
+
+```
+
+
+## Adding geometry
+
+```{r}
+pop_region_3338 <- ak_region_3338 %>% 
+  left_join(pop_region, by = "region")
+
+
+plot(pop_region_3338["total_pop"])
+```
+
+
+## Grouping by mgmt areas
+```{r}
+pop_mgmt_3338 <- pop_region_3338 %>% 
+  group_by(mgmt_area) %>% 
+  summarise(total_pop = sum(total_pop),
+            do_union = FALSE)
+
+plot(pop_mgmt_3338["total_pop"])
+```
+
+
+## Writting special data using `write_sf()`
+
+```{r}
+write_sf(pop_region_3338, "data/ak_regions_population.shp", delete_layer = TRUE)
+
+##delete_layer = TURE allows you to override your shp files when ever you run write_sf again.
+```
+
+
+## Plotting shp files with `ggplot2`
+
+```{r}
+ggplot(pop_region_3338)+
+  geom_sf(aes(fill = total_pop))+
+  theme_bw()+
+  labs( fill = "Total Population")+
+  scale_fill_continuous(low = "khaki", high = "firebrick", labels = comma)
+  
+```
+
+
+
+
+

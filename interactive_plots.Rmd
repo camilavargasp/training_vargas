@@ -1,0 +1,36 @@
+---
+title: "Practice Data Cleaning and Manipulation"
+author: "Camila Vargas Poulsen"
+date: "2023-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libriaries
+
+```{r}
+library(rvest)
+library(dplyr)
+library(readr)
+library(janitor)
+```
+
+## Scraping bird code species name
+
+```{r}
+webpage <- read_html("https://www.pwrc.usgs.gov/bbl/manual/speclist.cfm")
+
+tbls <- html_nodes(webpage, "table") %>% 
+    html_table(fill = TRUE)
+
+species <- tbls[[1]] %>% 
+    clean_names() %>% 
+    select(alpha_code, common_name) %>% 
+    mutate(alpha_code = tolower(alpha_code))
+```
+
+
+

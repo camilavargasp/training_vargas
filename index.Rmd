@@ -14,4 +14,4 @@ knitr::opts_chunk$set(echo = TRUE)
 - Data Cleaning
 - Gap filling
 - Linear models
-- Data Visualization
+- [Data Visualization](interactive-data-vis.html)

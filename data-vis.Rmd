@@ -1,0 +1,226 @@
+---
+title: "Data Visualization"
+author: "Camila Vargas Poulsen"
+date: "2023-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(leaflet)
+library(DT)
+```
+
+## Read Data
+
+```{r}
+data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e"
+
+esc <- tryCatch(
+    read.csv("data/escapement.csv"),
+    error=function(cond) {
+        message(paste("Escapement file does not seem to exist, so get it from the KNB."))
+        esc <- read.csv(url(data_url, method = "libcurl"))
+        return(esc)
+    }
+)
+
+head(esc)
+glimpse(esc)
+```
+
+
+## Summary Data
+Calculating annual escapements by species and region.
+
+```{r}
+annual_esc <- esc %>% 
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>% 
+  mutate(Year = as.numeric(Year)) %>% 
+  group_by(Species, SASAP.Region, Year) %>% 
+  summarise(escapement = sum(DailyCount)) %>% 
+  filter(Species %in% c("Chinook", "Sockeye", "Chum", "Coho", "Pink"))
+
+```
+
+
+## Plot Static Figures
+
+Basic `ggplot` figure.
+
+```{r}
+ggplot(annual_esc,
+       aes(x = Species,
+           y = escapement))+
+  geom_col()
+```
+
+Basic plot with blue bars.
+
+```{r}
+ggplot(annual_esc,
+       aes(x = Species,
+           y = escapement))+
+  geom_col(fill = "blue")
+```
+
+
+Plotting escapement for each species by region
+
+```{r}
+ggplot(annual_esc,
+       aes(x = Species,
+           y = escapement,
+           fill = SASAP.Region))+
+  geom_col()
+  
+```
+
+## `ggplot` and the pipe operator
+
+Annual escapement from Kodiak by species
+
+```{r}
+annual_esc %>% 
+  filter(SASAP.Region == "Kodiak") %>% 
+  ggplot(aes(x = Year,
+             y = escapement,
+             color = Species))+
+  geom_line()+
+  geom_point()
+  
+```
+
+
+## Customize our plot using theme_
+
+```{r}
+kodiak_esc <- annual_esc %>% 
+  filter(SASAP.Region == "Kodiak")
+```
+
+```{r}
+ggplot(kodiak_esc,
+       aes(x = Year,
+           y = escapement,
+           color = Species))+
+  geom_line()+
+  geom_point()+
+  ylab("Escapement")+
+  ggtitle("Kodiak Salmon Escapement")+
+  theme_bw()+
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+```
+
+
+## Saving my custom theme
+
+```{r}
+my_theme <- theme_bw()+
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+```
+
+```{r}
+ggplot(kodiak_esc,
+       aes(x = Year,
+           y = escapement,
+           color = Species))+
+  geom_line()+
+  geom_point()+
+  scale_y_continuous(labels = comma)+
+  ylab("Escapement")+
+  ggtitle("Kodiak Salmon Escapement")+
+  my_theme
+
+```
+
+
+## Saving my plot
+
+```{r}
+ggsave("kodiak_esc.png", width = 12, height = 3, units = "in")
+```
+
+## Crating multiple plots
+Plotting escapment thoughout years by region for each species
+
+```{r}
+ggplot(annual_esc,
+       aes(x = Year,
+           y = escapement,
+           color = Species))+
+  geom_line()+
+  geom_point()+
+  scale_y_continuous(labels = comma)+
+  facet_wrap(~SASAP.Region,
+             scales = "free_y",
+             ncol = 2)+
+  ylab("Escapement")+
+  theme_classic()
+  my_theme
+```
+
+## Creating interactive tables with `DT`
+
+Data frame with location information
+```{r}
+locations <- esc %>% 
+  distinct(Location, Latitude, Longitude) %>% 
+  drop_na()
+```
+
+
+Interactive table
+
+```{r}
+datatable(locations)
+```
+
+
+## Interactive maps using `leaflet`
+Map with locations with OpensStreetMap
+
+```{r}
+leaflet(locations) %>% 
+  addTiles() %>% 
+  addMarkers(lng = ~Longitude,
+             lat = ~Latitude,
+             popup = ~Location)
+```
+
+Map locations with a Web Map Service (WMS) for General Bathymetric map of the Ocean (GEBCO)
+
+```{r}
+
+leaflet(locations) %>% 
+  addWMSTiles("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getmap&service=wms&BBOX=-90,-180,90,360&crs=EPSG:4326&format=image/jpeg&layers=gebco_latest&width=1200&height=600&version=1.3.0",
+              layers = 'GEBCO_LATEST',
+              attribution = "Imagery reproduced from the GEBCO_2022 Grid, WMS 1.3.0 GetMap, www.gebco.net") %>%
+  addCircleMarkers(lng = ~Longitude,
+                   lat = ~Latitude,
+                   popup = ~ Location,
+                   radius = 5,
+                   # set fill properties
+                   fillColor = "salmon",
+                   fillOpacity = 1,
+                   # set stroke properties
+                   stroke = T,
+                   weight = 0.5,
+                   color = "white",
+                   opacity = 1)
+
+```
+
+
